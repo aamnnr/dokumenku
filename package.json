@@ -1,14 +1,25 @@
 {
   "name": "dokumenku",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Manajemen dokumen pribadi tanpa duplikasi file — Next.js 16, Supabase, dan Google Drive.",
   "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "drive:token": "node scripts/drive-token.mjs",
+    "drive:folder": "node scripts/drive-folder.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "googleapis": "^190.0.0",
+    "lucide-react": "^1.75.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0"

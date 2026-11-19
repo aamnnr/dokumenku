@@ -1,26 +1,205 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: #fafafa;
+  --color-foreground: #171717;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ================================================================
+   Motion tokens
+   Keluar cepat, masuk lebih lembut. Semua di bawah 400 ms.
+   ================================================================ */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* ================================================================
+   Keyframes
+   ================================================================ */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialog-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheet-out { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.92) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.96); } }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toast-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes star-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35) rotate(-12deg); }
+  100% { transform: scale(1); }
+}
+@keyframes highlight {
+  0% { box-shadow: 0 0 0 0 rgb(79 70 229 / 0.45); }
+  30% { box-shadow: 0 0 0 6px rgb(79 70 229 / 0.25); }
+  100% { box-shadow: 0 0 0 0 rgb(79 70 229 / 0); }
+}
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes progress-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+/* ================================================================
+   Komponen ber-animasi (open/close via data-state)
+   ================================================================ */
+.motion-backdrop[data-state="open"] { animation: fade-in var(--dur-base) var(--ease-out) both; }
+.motion-backdrop[data-state="closed"] { animation: fade-out var(--dur-fast) var(--ease-in) both; }
+
+/* Desktop: dialog membesar halus. Mobile: bottom sheet naik dari bawah. */
+.motion-dialog[data-state="open"] { animation: sheet-in var(--dur-slow) var(--ease-out) both; }
+.motion-dialog[data-state="closed"] { animation: sheet-out var(--dur-base) var(--ease-in) both; }
+@media (min-width: 640px) {
+  .motion-dialog[data-state="open"] { animation: dialog-in var(--dur-base) var(--ease-out) both; }
+  .motion-dialog[data-state="closed"] { animation: dialog-out var(--dur-fast) var(--ease-in) both; }
+}
+
+.motion-pop { transform-origin: top right; }
+.motion-pop[data-state="open"] { animation: pop-in var(--dur-fast) var(--ease-out) both; }
+.motion-pop[data-state="closed"] { animation: pop-out 100ms var(--ease-in) both; }
+
+.motion-toast[data-state="open"] { animation: toast-in var(--dur-slow) var(--ease-spring) both; }
+.motion-toast[data-state="closed"] { animation: toast-out var(--dur-base) var(--ease-in) both; }
+
+/* Muncul berurutan (stagger) memakai --i sebagai indeks. */
+.motion-rise {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+
+.motion-star { animation: star-pop 360ms var(--ease-spring); }
+.motion-highlight { animation: highlight 1.6s var(--ease-out) 2; }
+
+/* Umpan balik tekan untuk tombol utama. */
+.press { transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast), box-shadow var(--dur-fast); }
+.press:active:not(:disabled) { transform: scale(0.96); }
+
+/* Skeleton dengan kilau. */
+.skeleton {
+  background: linear-gradient(90deg, #eceef1 0%, #f6f7f9 40%, #eceef1 80%);
+  background-size: 250% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.progress-indeterminate { animation: progress-indeterminate 1.1s var(--ease-out) infinite; }
+
+/* ================================================================
+   View Transitions (React <ViewTransition>)
+   ================================================================ */
+::view-transition { pointer-events: none; }
+
+/* Navigasi lintas dokumen (reload penuh, mis. setelah login). */
+@view-transition { navigation: auto; }
+
+/* Elemen "jangkar" (header, navigasi bawah, toast, modal) tetap diam dan
+   berada DI ATAS kartu yang sedang beranimasi selama transisi berjalan. */
+::view-transition-group(.anchor) { animation: none; z-index: 100; }
+::view-transition-old(.anchor) { display: none; }
+::view-transition-new(.anchor) { animation: none; }
+
+/* Skeleton -> konten. */
+::view-transition-old(.slide-down) {
+  animation: var(--dur-fast) var(--ease-in) both fade-out, var(--dur-fast) var(--ease-in) both vt-down;
+}
+::view-transition-new(.slide-up) {
+  animation:
+    var(--dur-base) var(--ease-out) var(--dur-fast) both fade-in,
+    var(--dur-slow) var(--ease-out) both vt-up;
+}
+@keyframes vt-up { from { transform: translateY(12px); } to { transform: none; } }
+@keyframes vt-down { from { transform: none; } to { transform: translateY(12px); } }
+
+/* Perpindahan halaman berarah. */
+::view-transition-old(.nav-forward) {
+  --slide: -48px;
+  animation: var(--dur-fast) var(--ease-in) both fade-out, var(--dur-slow) var(--ease-out) both vt-slide-out;
+}
+::view-transition-new(.nav-forward) {
+  --slide: 48px;
+  animation: var(--dur-base) var(--ease-out) var(--dur-fast) both fade-in, var(--dur-slow) var(--ease-out) both vt-slide-in;
+}
+::view-transition-old(.nav-back) {
+  --slide: 48px;
+  animation: var(--dur-fast) var(--ease-in) both fade-out, var(--dur-slow) var(--ease-out) both vt-slide-out;
+}
+::view-transition-new(.nav-back) {
+  --slide: -48px;
+  animation: var(--dur-base) var(--ease-out) var(--dur-fast) both fade-in, var(--dur-slow) var(--ease-out) both vt-slide-in;
+}
+@keyframes vt-slide-in { from { translate: var(--slide); } to { translate: 0; } }
+@keyframes vt-slide-out { from { translate: 0; } to { translate: var(--slide); } }
+
+/* Kartu dokumen: masuk, keluar, dan pindah posisi saat filter berubah. */
+::view-transition-new(.card-enter) {
+  animation: var(--dur-slow) var(--ease-out) var(--dur-fast) both card-in;
+}
+::view-transition-old(.card-exit) {
+  animation: var(--dur-fast) var(--ease-in) both card-out;
+}
+::view-transition-group(.card-move) {
+  animation-duration: var(--dur-slow);
+  animation-timing-function: var(--ease-out);
+}
+@keyframes card-in { from { opacity: 0; transform: scale(0.94) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes card-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.92); } }
+
+/* Judul halaman berganti saat membuka folder. */
+::view-transition-old(.title-swap) { animation: var(--dur-fast) var(--ease-in) both fade-out, var(--dur-fast) var(--ease-in) both vt-title-out; }
+::view-transition-new(.title-swap) {
+  animation:
+    var(--dur-base) var(--ease-out) var(--dur-fast) both fade-in,
+    var(--dur-base) var(--ease-out) var(--dur-fast) both vt-title-in;
+}
+@keyframes vt-title-in { from { transform: translateY(6px); } to { transform: none; } }
+@keyframes vt-title-out { from { transform: none; } to { transform: translateY(-6px); } }
+
+/* ================================================================
+   Kurangi animasi (aksesibilitas)
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }
