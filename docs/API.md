@@ -40,10 +40,10 @@ dengan status `401`. Semua respons error berbentuk `{ success: false, error }`.
 
 | Method | Endpoint | Body | Respons |
 | --- | --- | --- | --- |
-| `GET` | `/api/import/token` | – | `{ success, accessToken, apiKey, appId }` untuk membuka Google Picker; tidak di-cache |
+| `GET` | `/api/import/token` | – | `{ success, accessToken, apiKey, appId, folderId }` untuk membuka Google Picker; tidak di-cache |
 | `POST` | `/api/import` | `{ fileIds: string[] (maks. 50), categoryId? }` | `{ success, documentIds, imported, existing, skipped: [{ name, reason }], message }` · `422` bila tidak ada file yang bisa diimpor |
 
-File tidak disalin atau dipindahkan. File yang isinya sudah tercatat (MD5 sama) tidak dicatat dua kali, cukup ditautkan ke kategori.
+File tidak disalin atau dipindahkan. Bila `GOOGLE_DRIVE_FOLDER_ID` diatur, file di luar folder itu (termasuk di subfolder) dilewati dengan alasan *"file berada di luar folder Dokumenku"*. File yang isinya sudah tercatat (MD5 sama) tidak dicatat dua kali, cukup ditautkan ke kategori.
 
 ## Unduh & berbagi
 

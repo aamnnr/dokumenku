@@ -118,8 +118,10 @@ export async function deleteDriveFile(fileId: string) {
  *            diberikan ke aplikasi (scope drive.file) jika appId cocok dengan
  *            project OAuth client. Diambil dari awalan GOOGLE_CLIENT_ID
  *            ("<nomor>-xxxx.apps.googleusercontent.com") bila tidak diisi.
+ * - folderId: folder penyimpanan (GOOGLE_DRIVE_FOLDER_ID). Bila ada, Picker
+ *            hanya menampilkan isi folder ini. `null` = seluruh Drive.
  */
-export function getPickerConfig(): { apiKey: string; appId: string } {
+export function getPickerConfig(): { apiKey: string; appId: string; folderId: string | null } {
   const apiKey = process.env.GOOGLE_PICKER_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -133,5 +135,10 @@ export function getPickerConfig(): { apiKey: string; appId: string } {
   if (!appId) {
     throw new Error("Nomor project Google Cloud tidak diketahui. Isi GOOGLE_CLOUD_PROJECT_NUMBER.");
   }
-  return { apiKey, appId };
+  return { apiKey, appId, folderId: getStorageFolderId() };
+}
+
+/** Folder penyimpanan Dokumenku di Drive, atau `null` bila tidak diatur. */
+export function getStorageFolderId(): string | null {
+  return process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() || null;
 }

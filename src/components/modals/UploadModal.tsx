@@ -250,7 +250,7 @@ export default function UploadModal({
                   {importing ? "Membuka Google Drive…" : "Impor dari Google Drive"}
                 </span>
                 <span className="block text-[11px] text-gray-400">
-                  Pilih file yang sudah ada di Drive, tanpa mengunggah ulang
+                  Pilih file yang Anda taruh di folder Dokumenku di Drive
                 </span>
               </span>
             </button>

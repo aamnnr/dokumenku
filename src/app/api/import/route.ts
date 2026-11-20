@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiError, getErrorMessage } from "@/lib/api";
 import { requireOwner } from "@/lib/auth";
-import { getDriveClient, toDriveError } from "@/lib/drive";
+import { getDriveClient, getStorageFolderId, toDriveError } from "@/lib/drive";
 import { getSupabase } from "@/lib/supabase";
 
 /** Batas file per sekali impor. */
@@ -14,6 +14,10 @@ type Skipped = { name: string; reason: string };
  * File TIDAK disalin atau dipindahkan; hanya dicatat di database. Metadata
  * dibaca dari Drive sendiri. File dengan isi yang sama (MD5) tidak dicatat
  * dua kali, dan file milik pengguna tidak pernah dihapus di sini.
+ *
+ * Bila GOOGLE_DRIVE_FOLDER_ID diatur, hanya file yang berada LANGSUNG di
+ * folder itu yang diterima. Subfolder tidak bisa diperiksa karena scope
+ * drive.file tidak memberi akses ke folder yang dibuat di luar aplikasi.
  */
 export async function POST(request: Request) {
   const auth = await requireOwner();
@@ -50,6 +54,7 @@ export async function POST(request: Request) {
     }
 
     const drive = getDriveClient();
+    const storageFolderId = getStorageFolderId();
     const documentIds: string[] = [];
     const skipped: Skipped[] = [];
     let imported = 0;
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
       try {
         ({ data: file } = await drive.files.get({
           fileId,
-          fields: "id, name, size, mimeType, md5Checksum, trashed",
+          fields: "id, name, size, mimeType, md5Checksum, trashed, parents",
           supportsAllDrives: true,
         }));
       } catch (driveError) {
@@ -75,6 +80,10 @@ export async function POST(request: Request) {
       const name = file.name ?? "Tanpa judul";
       if (!file.id || file.trashed) {
         skipped.push({ name, reason: "file ada di Sampah" });
+        continue;
+      }
+      if (storageFolderId && !file.parents?.includes(storageFolderId)) {
+        skipped.push({ name, reason: "file berada di luar folder Dokumenku" });
         continue;
       }
       if (file.mimeType?.startsWith("application/vnd.google-apps.")) {

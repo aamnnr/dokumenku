@@ -36,6 +36,7 @@ interface PickerBuilder {
 }
 
 interface DocsView {
+  setParent(folderId: string): DocsView;
   setIncludeFolders(value: boolean): DocsView;
   setSelectFolderEnabled(value: boolean): DocsView;
   setMode(mode: string): DocsView;
@@ -102,21 +103,26 @@ export async function pickDriveFiles(maxItems = 50): Promise<PickedFile[] | null
 
   return new Promise((resolve) => {
     const view = new picker.DocsView(picker.ViewId.DOCS)
-      .setIncludeFolders(true)
       .setSelectFolderEnabled(false)
       .setMode(picker.DocsViewMode.LIST);
+    // Dengan folder penyimpanan: hanya file langsung di folder itu, tanpa
+    // subfolder (server juga menolak file di luar folder ini).
+    if (config.folderId) view.setParent(config.folderId).setIncludeFolders(false);
+    else view.setIncludeFolders(true);
 
-    const instance: PickerInstance = new picker.PickerBuilder()
+    const builder = new picker.PickerBuilder()
       .addView(view)
-      .enableFeature(picker.Feature.MULTISELECT_ENABLED)
-      .enableFeature(picker.Feature.SUPPORT_DRIVES)
+      .enableFeature(picker.Feature.MULTISELECT_ENABLED);
+    if (!config.folderId) builder.enableFeature(picker.Feature.SUPPORT_DRIVES);
+
+    const instance: PickerInstance = builder
       .setMaxItems(maxItems)
       .setOAuthToken(config.accessToken)
       .setDeveloperKey(config.apiKey)
       .setAppId(config.appId)
       .setOrigin(window.location.origin)
       .setLocale("id")
-      .setTitle("Pilih file untuk diimpor")
+      .setTitle(config.folderId ? "Pilih file dari folder Dokumenku" : "Pilih file untuk diimpor")
       .setCallback((response) => {
         if (response.action === picker.Action.PICKED) {
           instance.dispose();

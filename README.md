@@ -134,6 +134,8 @@ docs/                    Dokumentasi lanjutan
 
 File yang ditaruh langsung ke Drive tidak otomatis muncul, karena scope `drive.file` tidak memberi akses ke file lain. Gunakan tombol **Impor dari Google Drive** di lembar Unggah: file yang dipilih di Google Picker otomatis bisa diakses aplikasi, lalu dicatat di database. File tetap di lokasi aslinya di Drive.
 
+Bila `GOOGLE_DRIVE_FOLDER_ID` diatur, impor **hanya untuk file yang berada langsung di folder Dokumenku**: Picker terbuka di folder itu tanpa subfolder, dan server menolak file dari luar folder. Bila tidak diatur, Picker menampilkan seluruh Drive.
+
 Penyiapan (sekali saja, di project Google Cloud yang sama dengan OAuth client):
 
 1. **APIs & Services → Library**: aktifkan **Google Picker API**.
