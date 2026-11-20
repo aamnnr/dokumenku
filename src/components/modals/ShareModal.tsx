@@ -17,6 +17,7 @@ import type { DocumentWithCategories } from "@/types";
 import { SHARE_FILE_MAX_BYTES } from "@/lib/constants";
 import { formatBytes } from "@/lib/file-types";
 import Modal from "@/components/ui/Modal";
+import Select from "@/components/ui/Select";
 
 interface ShareEmail {
   permissionId: string;
@@ -39,12 +40,14 @@ interface ShareModalProps {
 }
 
 const EXPIRY_OPTIONS = [
-  { value: 0, label: "Tanpa batas" },
-  { value: 1, label: "1 hari" },
-  { value: 7, label: "7 hari" },
-  { value: 30, label: "30 hari" },
-  { value: 90, label: "90 hari" },
+  { value: "0", label: "Tanpa batas" },
+  { value: "1", label: "1 hari" },
+  { value: "7", label: "7 hari" },
+  { value: "30", label: "30 hari" },
+  { value: "90", label: "90 hari" },
 ];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Kemampuan Web Share API dibaca di klien saja (aman untuk hidrasi).
 const noopSubscribe = () => () => {};
@@ -162,7 +165,10 @@ export default function ShareModal({ open, document, onClose, onChanged, showToa
 
   const addEmail = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email.trim()) return;
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Masukkan alamat email yang valid.");
+      return;
+    }
     const ok = await act("email", { action: "add-email", email, expiresInDays: expiry, message: note });
     if (ok) {
       setEmail("");
@@ -268,28 +274,26 @@ export default function ShareModal({ open, document, onClose, onChanged, showToa
               </div>
             </div>
 
-            <form onSubmit={addEmail} className="space-y-2">
+            <form onSubmit={addEmail} noValidate className="space-y-2">
               <div className="flex gap-2">
                 <input
                   type="email"
-                  required
+                  inputMode="email"
+                  autoComplete="email"
                   placeholder="nama@contoh.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400"
                 />
-                <select
-                  value={expiry}
-                  onChange={(event) => setExpiry(Number(event.target.value))}
-                  className="shrink-0 px-2 py-2 text-xs border border-gray-200 rounded-xl bg-white"
-                  aria-label="Masa berlaku akses"
-                >
-                  {EXPIRY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  label="Masa berlaku akses"
+                  size="sm"
+                  align="end"
+                  className="shrink-0"
+                  value={String(expiry)}
+                  onChange={(value) => setExpiry(Number(value))}
+                  options={EXPIRY_OPTIONS}
+                />
               </div>
               <input
                 type="text"
