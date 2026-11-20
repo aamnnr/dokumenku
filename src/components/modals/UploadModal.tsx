@@ -6,6 +6,7 @@ import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { formatBytes, getFileKind, getFileLabel } from "@/lib/file-types";
 import type { CategoryWithDocs } from "@/types";
 import Modal from "@/components/ui/Modal";
+import Select from "@/components/ui/Select";
 import FileKindIcon, { FILE_KIND_STYLES } from "@/components/ui/FileKindIcon";
 
 interface UploadModalProps {
@@ -55,8 +56,8 @@ export default function UploadModal({
     event.preventDefault();
     setError(null);
 
-    if (!file || !targetCategoryId) {
-      setError("Pilih file dan kategori terlebih dahulu.");
+    if (!file) {
+      setError("Pilih file terlebih dahulu.");
       return;
     }
 
@@ -72,7 +73,7 @@ export default function UploadModal({
           title: docTitle.trim() || file.name,
           mimeType: file.type || "application/octet-stream",
           size: file.size,
-          categoryId: targetCategoryId,
+          categoryId: targetCategoryId || undefined,
         }),
       });
       const session = await sessionRes.json();
@@ -88,7 +89,7 @@ export default function UploadModal({
       const completeRes = await fetch("/api/upload/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileId, categoryId: targetCategoryId }),
+        body: JSON.stringify({ fileId, categoryId: targetCategoryId || undefined }),
       });
       const result = await completeRes.json();
 
@@ -116,7 +117,7 @@ export default function UploadModal({
 
   return (
     <Modal open={open} title="Unggah Dokumen" onClose={onClose} locked={uploading}>
-      <form onSubmit={handleUpload} className="space-y-4">
+      <form onSubmit={handleUpload} noValidate className="space-y-4">
         {/* Area seret & lepas */}
         {!file ? (
           <div
@@ -193,25 +194,23 @@ export default function UploadModal({
         />
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">Kategori</label>
-          <select
+          <p className="block text-xs font-medium text-gray-700 mb-1.5">
+            Kategori <span className="text-gray-400 font-normal">(opsional)</span>
+          </p>
+          <Select
+            label="Kategori"
             value={targetCategoryId}
-            onChange={(event) => setTargetCategoryId(event.target.value)}
-            className={inputClass}
+            onChange={setTargetCategoryId}
             disabled={uploading}
-            required
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          {categories.length === 0 && (
-            <p className="text-[11px] text-amber-600 mt-1">
-              Buat kategori terlebih dahulu sebelum mengunggah dokumen.
-            </p>
-          )}
+            options={[
+              { value: "", label: "Tanpa kategori", hint: "Bisa ditautkan nanti lewat Edit" },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+                hint: category.description ?? undefined,
+              })),
+            ]}
+          />
         </div>
 
         <div>
@@ -260,7 +259,7 @@ export default function UploadModal({
           </button>
           <button
             type="submit"
-            disabled={uploading || !file || categories.length === 0}
+            disabled={uploading || !file}
             className="press px-4 py-2 text-xs font-medium text-white bg-gray-900 rounded-xl hover:bg-gray-800 disabled:opacity-40"
           >
             {uploading ? "Mengunggah..." : "Unggah File"}

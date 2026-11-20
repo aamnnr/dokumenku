@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState, ViewTransition } from "react";
+import React, { useRef, useState, ViewTransition } from "react";
 import {
   Download,
+  Eye,
   ExternalLink,
   FileText,
   Globe,
@@ -16,7 +17,7 @@ import {
 import type { DocumentWithCategories } from "@/types";
 import { formatBytes, formatRelativeDate, getFileKind, getFileLabel } from "@/lib/file-types";
 import FileKindIcon, { FILE_KIND_STYLES } from "@/components/ui/FileKindIcon";
-import { usePresence } from "@/lib/use-presence";
+import Popover from "@/components/ui/Popover";
 
 interface DocumentGridProps {
   documents: DocumentWithCategories[];
@@ -27,7 +28,8 @@ interface DocumentGridProps {
   hasActiveFilter: boolean;
   onResetFilters: () => void;
   onOpenUpload: () => void;
-  onPreview: (fileKey: string) => void;
+  onPreview: (document: DocumentWithCategories) => void;
+  onOpenInDrive: (fileKey: string) => void;
   onEdit: (document: DocumentWithCategories) => void;
   onDelete: (document: DocumentWithCategories) => void;
   onShare: (document: DocumentWithCategories) => void;
@@ -41,6 +43,7 @@ export default function DocumentGrid({
   onResetFilters,
   onOpenUpload,
   onPreview,
+  onOpenInDrive,
   onEdit,
   onDelete,
   onShare,
@@ -70,7 +73,7 @@ export default function DocumentGrid({
           <p className="text-xs text-gray-400 mt-1 mb-4">
             {hasActiveFilter
               ? "Coba ubah kata kunci atau filter."
-              : "Unggah dokumen pertama Anda dan tautkan ke kategori."}
+              : "Unggah dokumen pertama Anda. Kategori bisa ditambahkan kapan saja."}
           </p>
           {hasActiveFilter ? (
             <button
@@ -111,6 +114,7 @@ export default function DocumentGrid({
               highlight={doc.id === highlightId}
               doc={doc}
               onPreview={onPreview}
+              onOpenInDrive={onOpenInDrive}
               onEdit={onEdit}
               onDelete={onDelete}
               onShare={onShare}
@@ -127,13 +131,15 @@ function DocumentCard({
   doc,
   highlight,
   onPreview,
+  onOpenInDrive,
   onEdit,
   onDelete,
   onShare,
 }: {
   doc: DocumentWithCategories;
   highlight: boolean;
-  onPreview: (fileKey: string) => void;
+  onPreview: (document: DocumentWithCategories) => void;
+  onOpenInDrive: (fileKey: string) => void;
   onEdit: (document: DocumentWithCategories) => void;
   onDelete: (document: DocumentWithCategories) => void;
   onShare: (document: DocumentWithCategories) => void;
@@ -150,7 +156,7 @@ function DocumentCard({
     >
       <button
         type="button"
-        onClick={() => onPreview(doc.file_key)}
+        onClick={() => onPreview(doc)}
         className={`h-24 rounded-t-2xl bg-gradient-to-br ${style.banner} relative overflow-hidden text-left`}
         aria-label={`Buka ${doc.title}`}
       >
@@ -169,7 +175,8 @@ function DocumentCard({
         <div className="absolute -top-4 right-3 bg-white rounded-t-2xl px-1.5 pt-1.5">
           <CardMenu
             downloadHref={`/api/documents/${doc.id}/download`}
-            onOpen={() => onPreview(doc.file_key)}
+            onPreview={() => onPreview(doc)}
+            onOpenInDrive={() => onOpenInDrive(doc.file_key)}
             onShare={() => onShare(doc)}
             onEdit={() => onEdit(doc)}
             onDelete={() => onDelete(doc)}
@@ -208,6 +215,11 @@ function DocumentCard({
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 gap-2">
           <div className="flex flex-wrap gap-1 overflow-hidden max-h-[22px]">
+            {doc.categoryNames.length === 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-medium text-gray-400 border border-dashed border-gray-200 rounded-md">
+                Tanpa kategori
+              </span>
+            )}
             {doc.categoryNames.map((name) => (
               <span
                 key={name}
@@ -218,7 +230,7 @@ function DocumentCard({
             ))}
           </div>
           <button
-            onClick={() => onPreview(doc.file_key)}
+            onClick={() => onPreview(doc)}
             className="group/open text-xs font-medium text-gray-900 hover:text-indigo-600 shrink-0 transition-colors"
           >
             Buka <span className="inline-block transition-transform duration-200 group-hover/open:translate-x-0.5">→</span>
@@ -231,35 +243,22 @@ function DocumentCard({
 
 function CardMenu({
   downloadHref,
-  onOpen,
+  onPreview,
+  onOpenInDrive,
   onShare,
   onEdit,
   onDelete,
 }: {
   downloadHref: string;
-  onOpen: () => void;
+  onPreview: () => void;
+  onOpenInDrive: () => void;
   onShare: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const mounted = usePresence(open, 120);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent ? event.key === "Escape" : !ref.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const close = () => setOpen(false);
 
   const item = (label: string, Icon: typeof Pencil, action: () => void, danger = false) => (
     <button
@@ -269,18 +268,21 @@ function CardMenu({
         setOpen(false);
         action();
       }}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${
-        danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
+      className={`w-full flex items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm sm:text-xs rounded-lg text-left transition-colors focus:outline-none ${
+        danger
+          ? "text-red-600 hover:bg-red-50 focus-visible:bg-red-50"
+          : "text-gray-700 hover:bg-gray-50 focus-visible:bg-gray-100"
       }`}
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       {label}
     </button>
   );
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
@@ -292,24 +294,20 @@ function CardMenu({
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>
-      {mounted && (
-        <div
-          role="menu"
-          data-state={open ? "open" : "closed"}
-          className="motion-pop absolute right-0 top-9 z-30 w-44 p-1 bg-white border border-gray-200 rounded-xl shadow-lg"
-        >
-          {item("Buka di Drive", ExternalLink, onOpen)}
-          {item("Unduh", Download, () => {
-            // Server mengarahkan ke tautan unduhan Google Drive.
-            window.location.assign(downloadHref);
-          })}
-          {item("Bagikan…", Share2, onShare)}
-          <div className="my-1 border-t border-gray-100" />
-          {item("Edit nama & kategori", Pencil, onEdit)}
-          <div className="my-1 border-t border-gray-100" />
-          {item("Hapus", Trash2, onDelete, true)}
-        </div>
-      )}
-    </div>
+      {/* Popover memilih sendiri: bawah, atas, atau samping agar tidak terpotong. */}
+      <Popover open={open} onClose={close} anchorRef={triggerRef} align="end" role="menu" ariaLabel="Menu dokumen" className="w-52 sm:w-48 p-1">
+        {item("Pratinjau", Eye, onPreview)}
+        {item("Buka di Drive", ExternalLink, onOpenInDrive)}
+        {item("Unduh", Download, () => {
+          // Server mengarahkan ke tautan unduhan Google Drive.
+          window.location.assign(downloadHref);
+        })}
+        {item("Bagikan…", Share2, onShare)}
+        <div className="my-1 border-t border-gray-100" />
+        {item("Edit nama & kategori", Pencil, onEdit)}
+        <div className="my-1 border-t border-gray-100" />
+        {item("Hapus", Trash2, onDelete, true)}
+      </Popover>
+    </>
   );
 }

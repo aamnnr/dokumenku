@@ -35,7 +35,6 @@ export default function EditDocumentModal({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!title.trim()) return setError("Nama dokumen wajib diisi.");
-    if (selected.length === 0) return setError("Pilih minimal satu kategori.");
 
     setSaving(true);
     setError(null);
@@ -59,7 +58,7 @@ export default function EditDocumentModal({
 
   return (
     <Modal open={open} title="Edit Dokumen" onClose={onClose} locked={saving}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">Nama dokumen</label>
           <input
@@ -73,8 +72,15 @@ export default function EditDocumentModal({
         </div>
 
         <div>
-          <p className="text-xs font-medium text-gray-700 mb-1.5">Kategori</p>
-          <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <p className="text-xs font-medium text-gray-700 mb-1.5">
+            Kategori <span className="text-gray-400 font-normal">(opsional)</span>
+          </p>
+          {categories.length === 0 && (
+            <p className="text-xs text-gray-400 rounded-xl border border-dashed border-gray-200 px-3.5 py-3">
+              Belum ada kategori.
+            </p>
+          )}
+          <div className={`max-h-56 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 ${categories.length === 0 ? "hidden" : ""}`}>
             {categories.map((category) => {
               const checked = selected.includes(category.id);
               return (
@@ -98,7 +104,9 @@ export default function EditDocumentModal({
             })}
           </div>
           <p className="text-[11px] text-gray-400 mt-1">
-            Satu file bisa masuk beberapa kategori tanpa disalin.
+            {selected.length === 0
+              ? "Tidak dipilih: dokumen disimpan sebagai tanpa kategori."
+              : "Satu file bisa masuk beberapa kategori tanpa disalin."}
           </p>
         </div>
 

@@ -1,12 +1,18 @@
 import { Suspense, ViewTransition } from "react";
 import { redirect } from "next/navigation";
-import Dashboard from "@/components/Dashboard";
+import AppShell from "@/components/AppShell";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import PageTransition from "@/components/PageTransition";
 import { getSession } from "@/lib/auth";
-import { getCategoriesWithDocuments } from "@/lib/queries";
+import { getLibrary } from "@/lib/queries";
 
-export default function Page() {
+/**
+ * Layout bersama Beranda, Favorit, Kategori, dan Akun. Data pustaka dimuat
+ * sekali di sini sehingga pindah tab tidak memuat ulang data; halaman hanya
+ * merender isinya. Data runtime (cookie) dibungkus <Suspense> sesuai
+ * aturan Cache Components.
+ */
+export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <PageTransition>
       <Suspense
@@ -18,18 +24,22 @@ export default function Page() {
         }
       >
         <ViewTransition enter="slide-up" default="none">
-          <DashboardLoader />
+          <AppLoader>{children}</AppLoader>
         </ViewTransition>
       </Suspense>
     </PageTransition>
   );
 }
 
-async function DashboardLoader() {
+async function AppLoader({ children }: { children: React.ReactNode }) {
   // Proxy sudah memblokir tamu; pengecekan diulang di dekat data.
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const categories = await getCategoriesWithDocuments();
-  return <Dashboard categories={categories} userEmail={session.email} />;
+  const { categories, uncategorized } = await getLibrary();
+  return (
+    <AppShell categories={categories} uncategorized={uncategorized} userEmail={session.email}>
+      {children}
+    </AppShell>
+  );
 }

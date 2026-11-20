@@ -12,3 +12,9 @@ export const FAVORITES_STORAGE_KEY = "dokumenku:favorites";
  * jadi dijaga di bawah batas respons Vercel (4,5 MB).
  */
 export const SHARE_FILE_MAX_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Batas pratinjau langsung di aplikasi (file dialirkan lewat server, jadi
+ * sama dengan batas di atas). File lebih besar memakai penampil Google Drive.
+ */
+export const INLINE_PREVIEW_MAX_BYTES = SHARE_FILE_MAX_BYTES;

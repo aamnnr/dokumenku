@@ -94,13 +94,16 @@ Daftar lengkap beserta penjelasannya ada di [`.env.example`](.env.example).
 src/
 ├─ proxy.ts              Penjaga akses: tamu diarahkan ke /login, API dibalas 401
 ├─ app/
-│  ├─ page.tsx           Dashboard (Server Component + skeleton)
+│  ├─ (app)/             Layout bersama (data + navigasi + modal) dan halaman:
+│  │                     / Beranda, /favorit, /kategori, /akun
 │  ├─ login/, privacy/   Halaman masuk & kebijakan privasi
 │  ├─ manifest.ts        Manifest PWA
 │  └─ api/               Route handler (auth, upload, documents, share, …)
-├─ components/           Dashboard, Sidebar, MobileBottomNav, FolderGrid, DocumentGrid
-│  ├─ modals/            Upload, Kategori, Edit, Hapus, Bagikan
-│  └─ ui/                Modal, FilterPill, Logo, ikon jenis file
+├─ components/           AppShell (context), Sidebar, MobileBottomNav, FolderGrid,
+│  │                     DocumentGrid, DocumentViewer (pratinjau)
+│  ├─ views/             Isi halaman: Home, Favorites, Categories, Account
+│  ├─ modals/            Upload, Kategori (buat/ubah), Hapus kategori, Edit, Hapus, Bagikan
+│  └─ ui/                Modal (bottom sheet), Popover, Select, FilterPill, Logo, ikon
 ├─ lib/                  auth, session, drive, sharing, supabase, queries, pwa, …
 └─ types/                Tipe domain & skema database
 public/                  Ikon PWA, logo, service worker, halaman offline

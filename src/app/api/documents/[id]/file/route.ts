@@ -7,8 +7,9 @@ import { getDriveClient, toDriveError } from "@/lib/drive";
 import { findDocument } from "@/lib/sharing";
 
 /**
- * Isi file mentah, dipakai untuk "Kirim file" lewat lembar bagikan perangkat
- * (Web Share API). Dibatasi ukurannya karena melewati server.
+ * Isi file mentah, dipakai untuk pratinjau di aplikasi dan "Kirim file" lewat
+ * lembar bagikan perangkat (Web Share API). Dibatasi ukurannya karena
+ * melewati server.
  */
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/documents/[id]/file">) {
   const auth = await requireOwner();
