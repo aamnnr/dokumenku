@@ -10,7 +10,7 @@ import InstallAppButton from "@/components/InstallAppButton";
 /** Sidebar khusus desktop/tablet. Di mobile diganti navigasi bawah. */
 export default function Sidebar() {
   const pathname = usePathname();
-  const { categories, favorites, folder, openFolder, openUpload, createCategory, toggleFavorite, themeFor, userEmail } =
+  const { categories, favorites, openFolder, openUpload, createCategory, toggleFavorite, themeFor, userEmail } =
     useApp();
   const favoriteCategories = categories.filter((category) => favorites.includes(category.id));
 
@@ -19,17 +19,21 @@ export default function Sidebar() {
       active ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
     }`;
 
-  const navLink = (href: string, label: string, Icon: typeof Home) => (
-    <Link
-      href={href}
-      transitionTypes={navTypes(pathname, href)}
-      aria-current={pathname === href ? "page" : undefined}
-      className={navClass(pathname === href)}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </Link>
-  );
+  const navLink = (href: string, label: string, Icon: typeof Home) => {
+    // Halaman folder (/kategori/...) termasuk bagian tab Kategori.
+    const active = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+    return (
+      <Link
+        href={href}
+        transitionTypes={navTypes(pathname, href)}
+        aria-current={pathname === href ? "page" : undefined}
+        className={navClass(active)}
+      >
+        <Icon className="w-4 h-4" />
+        {label}
+      </Link>
+    );
+  };
 
   return (
     <aside className="hidden md:flex sticky top-0 h-screen w-64 shrink-0 bg-white border-r border-gray-200/80 flex-col justify-between">
@@ -63,7 +67,7 @@ export default function Sidebar() {
         ) : (
           <div className="space-y-1">
             {favoriteCategories.map((category) => {
-              const active = pathname === "/" && folder === category.id;
+              const active = pathname === `/kategori/${category.id}`;
               return (
                 <div
                   key={category.id}

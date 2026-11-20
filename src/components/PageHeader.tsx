@@ -5,10 +5,14 @@ interface PageHeaderProps {
   subtitle?: string;
   /** Tombol aksi di kanan (mis. "Buat kategori"). */
   action?: React.ReactNode;
+  /** Elemen di kiri judul, mis. tombol kembali di halaman folder. */
+  leading?: React.ReactNode;
+  /** Kelas tambahan untuk judul (mis. font-mono untuk nama kategori). */
+  titleClassName?: string;
 }
 
 /** Header lengket untuk halaman selain Beranda (Favorit, Kategori, Akun). */
-export default function PageHeader({ title, subtitle, action }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, action, leading, titleClassName = "" }: PageHeaderProps) {
   return (
     <header
       style={{ viewTransitionName: "site-header", viewTransitionClass: "anchor" }}
@@ -18,9 +22,14 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
         <BrandMark size="sm" />
       </div>
       <div className="flex items-center justify-between gap-3 min-h-9">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-gray-900 truncate">{title}</h1>
-          {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+        <div className="min-w-0 flex items-center gap-2">
+          {leading}
+          <div className="min-w-0">
+            <h1 className={`text-xl sm:text-2xl font-semibold tracking-tight text-gray-900 truncate ${titleClassName}`}>
+              {title}
+            </h1>
+            {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+          </div>
         </div>
         {action}
       </div>

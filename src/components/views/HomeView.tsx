@@ -1,20 +1,14 @@
 "use client";
 
 import { useDeferredValue, useMemo, ViewTransition } from "react";
-import { FILE_KIND_LABELS, getFileKind } from "@/lib/file-types";
-import { UNCATEGORIZED, useApp, type KindFilter, type SortKey } from "@/components/AppShell";
+import { FILE_KIND_LABELS } from "@/lib/file-types";
+import { availableKinds, filterAndSort, SORT_OPTIONS, type KindFilter, type SortKey } from "@/lib/document-filters";
+import { UNCATEGORIZED, useApp } from "@/components/AppShell";
 import TopHeader from "@/components/TopHeader";
 import FolderGrid from "@/components/FolderGrid";
 import DocumentGrid from "@/components/DocumentGrid";
 import FilterPill from "@/components/ui/FilterPill";
 import { PageBody } from "@/components/PageHeader";
-
-const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: "newest", label: "Terbaru" },
-  { value: "oldest", label: "Terlama" },
-  { value: "name", label: "Nama (A–Z)" },
-  { value: "size", label: "Ukuran terbesar" },
-];
 
 /** Beranda: pencarian, filter, folder, dan daftar dokumen. */
 export default function HomeView() {
@@ -23,39 +17,19 @@ export default function HomeView() {
   // Pencarian ditunda sedikit agar animasi daftar berjalan sebagai transition.
   const query = useDeferredValue(search).trim().toLowerCase();
 
-  const availableKinds = useMemo(
-    () => [...new Set(documents.map((doc) => getFileKind(doc.mime_type, doc.title)))],
-    [documents]
-  );
+  const kinds = useMemo(() => availableKinds(documents), [documents]);
   const hasUncategorized = documents.some((doc) => doc.categoryIds.length === 0);
 
-  const displayedDocuments = documents
-    .filter((doc) =>
+  const displayedDocuments = filterAndSort(
+    documents.filter((doc) =>
       folder === "ALL"
         ? true
         : folder === UNCATEGORIZED
           ? doc.categoryIds.length === 0
           : doc.categoryIds.includes(folder)
-    )
-    .filter((doc) => kind === "ALL" || getFileKind(doc.mime_type, doc.title) === kind)
-    .filter(
-      (doc) =>
-        !query ||
-        doc.title.toLowerCase().includes(query) ||
-        doc.categoryNames.some((name) => name.toLowerCase().includes(query))
-    )
-    .sort((a, b) => {
-      switch (sort) {
-        case "oldest":
-          return a.created_at.localeCompare(b.created_at);
-        case "name":
-          return a.title.localeCompare(b.title, "id");
-        case "size":
-          return b.file_size - a.file_size;
-        default:
-          return b.created_at.localeCompare(a.created_at);
-      }
-    });
+    ),
+    { kind, query, sort }
+  );
 
   const filteredCategories = categories.filter(
     (category) =>
@@ -107,7 +81,7 @@ export default function HomeView() {
               onChange={app.setKind}
               options={[
                 { value: "ALL", label: "Semua" },
-                ...availableKinds.map((value) => ({ value, label: FILE_KIND_LABELS[value] })),
+                ...kinds.map((value) => ({ value, label: FILE_KIND_LABELS[value] })),
               ]}
             />
             <FilterPill<SortKey> label="Urutkan" value={sort} onChange={app.setSort} options={SORT_OPTIONS} />

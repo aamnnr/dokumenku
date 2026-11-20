@@ -9,7 +9,7 @@ Satu file hanya disimpan **satu kali** di Google Drive. Bila file yang sama dima
 - **Login Google khusus pemilik** dengan sesi cookie bertanda tangan; seluruh halaman dan API terlindungi.
 - **Unggah langsung ke Google Drive** (resumable, hingga 100 MB) dengan progres, seret-dan-lepas, serta deduplikasi otomatis berbasis MD5.
 - **Impor dari Google Drive**: pilih file yang sudah ada di Drive lewat Google Picker; file dicatat tanpa diunggah ulang atau dipindahkan.
-- **Kategori/folder** many-to-many: satu dokumen bisa masuk banyak kategori. Ada favorit, pencarian, serta filter jenis file dan urutan.
+- **Kategori/folder** many-to-many: satu dokumen bisa masuk banyak kategori, masing-masing dengan halaman folder sendiri (`/kategori/[id]`). Ada favorit, pencarian, serta filter jenis file dan urutan.
 - **Kelola dokumen**: ganti nama, atur kategori, dan hapus (file dipindah ke Sampah Drive).
 - **Unduh & bagikan**: tautan publik yang bisa dicabut, akses ke email tertentu dengan masa berlaku, dan kirim file langsung lewat lembar bagikan perangkat.
 - **PWA**: bisa dipasang di HP/desktop, ada halaman offline, dan navigasi bawah di mobile.

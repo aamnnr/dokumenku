@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Folder, Home, Plus, Star, User } from "lucide-react";
 import { navTypes, useApp } from "@/components/AppShell";
 
@@ -18,10 +18,18 @@ const TABS = [
  */
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const fromFavorites = useSearchParams().get("dari") === "favorit";
   const { openUpload } = useApp();
 
+  // Halaman folder termasuk tab Kategori, kecuali dibuka dari Favorit.
+  const activeTab = pathname.startsWith("/kategori/")
+    ? fromFavorites
+      ? "/favorit"
+      : "/kategori"
+    : pathname;
+
   const tab = ({ href, label, Icon }: (typeof TABS)[number]) => {
-    const active = pathname === href;
+    const active = activeTab === href;
     return (
       <Link
         key={href}
@@ -29,8 +37,8 @@ export default function MobileBottomNav() {
         transitionTypes={navTypes(pathname, href)}
         aria-current={active ? "page" : undefined}
         onClick={() => {
-          // Ketuk tab aktif = gulir ke atas.
-          if (active) window.scrollTo({ top: 0, behavior: "smooth" });
+          // Ketuk tab aktif di halaman utamanya = gulir ke atas.
+          if (pathname === href) window.scrollTo({ top: 0, behavior: "smooth" });
         }}
         className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
           active ? "text-gray-900" : "text-gray-400 active:text-gray-700"

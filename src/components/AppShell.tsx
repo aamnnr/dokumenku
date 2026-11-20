@@ -14,7 +14,7 @@ import React, {
 import { usePathname, useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import type { CategoryWithDocs, DocumentItem, DocumentWithCategories } from "@/types";
-import type { FileKind } from "@/lib/file-types";
+import type { KindFilter, SortKey } from "@/lib/document-filters";
 import { FOLDER_THEMES, type FolderTheme } from "@/lib/folder-themes";
 import { removeFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
 import { usePresence } from "@/lib/use-presence";
@@ -31,14 +31,34 @@ import ShareModal from "@/components/modals/ShareModal";
 /** Nilai filter folder khusus untuk dokumen yang tidak punya kategori. */
 export const UNCATEGORIZED = "NONE";
 export type FolderFilter = string; // "ALL" | UNCATEGORIZED | id kategori
-export type KindFilter = "ALL" | FileKind;
-export type SortKey = "newest" | "oldest" | "name" | "size";
+export type { KindFilter, SortKey };
+
+/** Segmen URL halaman folder untuk dokumen tanpa kategori. */
+export const UNCATEGORIZED_SLUG = "tanpa-kategori";
+
+/**
+ * Alamat halaman folder. `from: "favorit"` menandai folder dibuka dari
+ * halaman Favorit: tab Favorit tetap tersorot dan tombol kembali ke sana.
+ */
+export function folderHref(id: string, from?: "favorit"): string {
+  const slug = id === UNCATEGORIZED ? UNCATEGORIZED_SLUG : id;
+  return `/kategori/${slug}${from ? `?dari=${from}` : ""}`;
+}
 
 /** Urutan tab: menentukan arah animasi geser antarhalaman. */
 export const NAV_ORDER = ["/", "/favorit", "/kategori", "/akun"] as const;
-export function navTypes(from: string, to: string): string[] {
-  const a = NAV_ORDER.indexOf(from as (typeof NAV_ORDER)[number]);
-  const b = NAV_ORDER.indexOf(to as (typeof NAV_ORDER)[number]);
+function tabIndex(path: string): number {
+  return NAV_ORDER.indexOf(`/${path.split("/")[1] ?? ""}` as (typeof NAV_ORDER)[number]);
+}
+export function navTypes(fromHref: string, toHref: string): string[] {
+  const from = fromHref.split("?")[0];
+  const to = toHref.split("?")[0];
+  if (from === to) return [];
+  // Masuk lebih dalam (Kategori → folder) maju; keluar (folder → Kategori) mundur.
+  if (from !== "/" && to.startsWith(`${from}/`)) return ["nav-forward"];
+  if (to !== "/" && from.startsWith(`${to}/`)) return ["nav-back"];
+  const a = tabIndex(from);
+  const b = tabIndex(to);
   if (a === -1 || b === -1 || a === b) return [];
   return [b > a ? "nav-forward" : "nav-back"];
 }
@@ -62,8 +82,10 @@ interface AppContextValue {
   setSort: (value: SortKey) => void;
   search: string;
   setSearch: (value: string) => void;
-  /** Buka folder di Beranda dari halaman mana pun. */
-  openFolder: (id: FolderFilter) => void;
+  /** Buka halaman folder (kategori atau UNCATEGORIZED). */
+  openFolder: (id: string, from?: "favorit") => void;
+  /** Kembali ke `fallback`: pakai riwayat bila halaman sebelumnya memang itu. */
+  goBack: (fallback: string) => void;
 
   // Aksi
   refresh: (documentId?: string) => void;
@@ -132,10 +154,28 @@ export default function AppShell({ categories, uncategorized, userEmail, childre
       : "ALL";
 
   const openFolder = useCallback(
-    (id: FolderFilter) => {
-      setFolderState(id);
-      setSearch("");
-      if (pathname !== "/") router.push("/", { transitionTypes: navTypes(pathname, "/") });
+    (id: string, from?: "favorit") => {
+      const href = folderHref(id, from);
+      router.push(href, { transitionTypes: navTypes(pathname, href) });
+    },
+    [pathname, router]
+  );
+
+  // Halaman sebelumnya di dalam aplikasi, agar tombol kembali tidak
+  // menumpuk riwayat (folder → Kategori → folder → …).
+  const previousPath = useRef<string | null>(null);
+  const currentPath = useRef(pathname);
+  useEffect(() => {
+    if (currentPath.current !== pathname) {
+      previousPath.current = currentPath.current;
+      currentPath.current = pathname;
+    }
+  }, [pathname]);
+
+  const goBack = useCallback(
+    (fallback: string) => {
+      if (previousPath.current === fallback.split("?")[0]) router.back();
+      else router.push(fallback, { transitionTypes: navTypes(pathname, fallback) });
     },
     [pathname, router]
   );
@@ -239,7 +279,13 @@ export default function AppShell({ categories, uncategorized, userEmail, childre
   const openUpload = useCallback(() => openUploadSheet(true), [openUploadSheet]);
   const createCategory = useCallback(() => openCategorySheet("new"), [openCategorySheet]);
 
-  const activeCategory = categories.find((category) => category.id === folder);
+  // Unggah dari Beranda (folder terfilter) atau dari halaman folder langsung
+  // masuk ke kategori itu.
+  const folderPageId = pathname.startsWith("/kategori/") ? pathname.split("/")[2] : null;
+  const uploadCategoryId =
+    pathname === "/"
+      ? (categories.find((category) => category.id === folder)?.id ?? "")
+      : (categories.find((category) => category.id === folderPageId)?.id ?? "");
 
   const value: AppContextValue = {
     userEmail,
@@ -258,6 +304,7 @@ export default function AppShell({ categories, uncategorized, userEmail, childre
     search,
     setSearch,
     openFolder,
+    goBack,
     refresh,
     showToast,
     toggleFavorite,
@@ -328,6 +375,10 @@ export default function AppShell({ categories, uncategorized, userEmail, childre
           onClose={closeDeleteCategory}
           onSuccess={(categoryId) => {
             removeFavorite(categoryId);
+            // Folder yang sedang dibuka sudah tidak ada: kembali ke daftar.
+            if (pathname === `/kategori/${categoryId}`) {
+              router.replace("/kategori", { transitionTypes: ["nav-back"] });
+            }
             refresh();
           }}
           showToast={showToast}
@@ -339,8 +390,7 @@ export default function AppShell({ categories, uncategorized, userEmail, childre
         open={upload.open}
         onClose={closeUpload}
         categories={categories}
-        // Di Beranda dengan folder terbuka, unggahan langsung masuk ke folder itu.
-        defaultCategoryId={pathname === "/" ? (activeCategory?.id ?? "") : ""}
+        defaultCategoryId={uploadCategoryId}
         onSuccess={refresh}
         showToast={showToast}
       />

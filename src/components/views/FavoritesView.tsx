@@ -53,7 +53,7 @@ export default function FavoritesView() {
               categories={favoriteCategories}
               selectedFolderId=""
               favorites={app.favorites}
-              onSelectFolder={app.openFolder}
+              onSelectFolder={(id) => app.openFolder(id, "favorit")}
               onToggleFavorite={app.toggleFavorite}
               onOpenCategoryModal={app.createCategory}
               themeFor={app.themeFor}
