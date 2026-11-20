@@ -36,6 +36,15 @@ dengan status `401`. Semua respons error berbentuk `{ success: false, error }`.
 | `PUT` | `uploadUrl` (Google) | isi file mentah | `{ id }` |
 | `POST` | `/api/upload/complete` | `{ fileId, categoryId? }` | `{ success, documentId, deduplicated, message }` |
 
+## Impor dari Google Drive
+
+| Method | Endpoint | Body | Respons |
+| --- | --- | --- | --- |
+| `GET` | `/api/import/token` | – | `{ success, accessToken, apiKey, appId }` untuk membuka Google Picker; tidak di-cache |
+| `POST` | `/api/import` | `{ fileIds: string[] (maks. 50), categoryId? }` | `{ success, documentIds, imported, existing, skipped: [{ name, reason }], message }` · `422` bila tidak ada file yang bisa diimpor |
+
+File tidak disalin atau dipindahkan. File yang isinya sudah tercatat (MD5 sama) tidak dicatat dua kali, cukup ditautkan ke kategori.
+
 ## Unduh & berbagi
 
 | Method | Endpoint | Body | Respons |

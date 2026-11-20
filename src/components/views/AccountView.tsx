@@ -72,7 +72,7 @@ export default function AccountView() {
         </section>
 
         <p className="text-[11px] text-gray-400 text-center">
-          File tersimpan di Google Drive Anda; aplikasi hanya bisa mengakses file yang diunggah lewat Dokumenku.
+          File tersimpan di Google Drive Anda; aplikasi hanya bisa mengakses file yang diunggah atau diimpor lewat Dokumenku.
         </p>
       </PageBody>
     </>

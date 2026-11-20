@@ -8,6 +8,7 @@ Satu file hanya disimpan **satu kali** di Google Drive. Bila file yang sama dima
 
 - **Login Google khusus pemilik** dengan sesi cookie bertanda tangan; seluruh halaman dan API terlindungi.
 - **Unggah langsung ke Google Drive** (resumable, hingga 100 MB) dengan progres, seret-dan-lepas, serta deduplikasi otomatis berbasis MD5.
+- **Impor dari Google Drive**: pilih file yang sudah ada di Drive lewat Google Picker; file dicatat tanpa diunggah ulang atau dipindahkan.
 - **Kategori/folder** many-to-many: satu dokumen bisa masuk banyak kategori. Ada favorit, pencarian, serta filter jenis file dan urutan.
 - **Kelola dokumen**: ganti nama, atur kategori, dan hapus (file dipindah ke Sampah Drive).
 - **Unduh & bagikan**: tautan publik yang bisa dicabut, akses ke email tertentu dengan masa berlaku, dan kirim file langsung lewat lembar bagikan perangkat.
@@ -85,6 +86,8 @@ Daftar lengkap beserta penjelasannya ada di [`.env.example`](.env.example).
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ✅ | Kredensial OAuth client |
 | `GOOGLE_REFRESH_TOKEN` | ✅ | Akses Drive milik pemilik (`npm run drive:token`) |
 | `GOOGLE_DRIVE_FOLDER_ID` | – | Folder tujuan unggahan (`npm run drive:folder`) |
+| `GOOGLE_PICKER_API_KEY` | – | API key untuk fitur Impor dari Google Drive |
+| `GOOGLE_CLOUD_PROJECT_NUMBER` | – | Nomor project Google Cloud; default diambil dari awalan `GOOGLE_CLIENT_ID` |
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | URL proyek Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Kunci rahasia, **khusus server** |
 
@@ -123,9 +126,27 @@ docs/                    Dokumentasi lanjutan
 - Hanya `OWNER_EMAIL` yang bisa masuk. Sesi tersimpan di cookie `httpOnly` bertanda tangan HMAC dan berlaku 7 hari.
 - Akses diperiksa dua kali: di `proxy.ts` dan di setiap route handler.
 - Tabel Supabase terkunci RLS, sehingga *anon key* tidak bisa membaca atau menulis apa pun. Server memakai service role key yang tidak pernah dikirim ke browser.
-- Scope Drive `drive.file` membuat aplikasi hanya bisa mengakses file yang diunggahnya sendiri.
+- Scope Drive `drive.file` membuat aplikasi hanya bisa mengakses file yang diunggahnya sendiri atau yang dipilih pemilik lewat Google Picker.
 - Tautan publik bisa dibuka siapa saja yang memegangnya. Untuk dokumen sensitif (KTP, KK, dan sejenisnya), sebaiknya bagikan ke email tertentu dengan masa berlaku.
 - **Jangan pernah commit `.env.local`.** Bila sebuah kunci sempat terekspos, putar ulang (*rotate*) kunci tersebut.
+
+## Impor dari Google Drive
+
+File yang ditaruh langsung ke Drive tidak otomatis muncul, karena scope `drive.file` tidak memberi akses ke file lain. Gunakan tombol **Impor dari Google Drive** di lembar Unggah: file yang dipilih di Google Picker otomatis bisa diakses aplikasi, lalu dicatat di database. File tetap di lokasi aslinya di Drive.
+
+Penyiapan (sekali saja, di project Google Cloud yang sama dengan OAuth client):
+
+1. **APIs & Services → Library**: aktifkan **Google Picker API**.
+2. **APIs & Services → Credentials → Create credentials → API key**. Batasi key tersebut:
+   - *Application restrictions*: **Websites**, isi `http://localhost:3000/*` dan domain produksi, mis. `https://dokumen.contoh.com/*`.
+   - *API restrictions*: hanya **Google Picker API**.
+3. Isi `GOOGLE_PICKER_API_KEY` di `.env.local` dan di Vercel.
+4. Opsional: `GOOGLE_CLOUD_PROJECT_NUMBER` (Cloud Console → beranda project). Bila kosong, diambil dari awalan angka `GOOGLE_CLIENT_ID`.
+
+Catatan:
+
+- Google Docs/Sheets/Slides belum bisa diimpor; unduh sebagai PDF atau Office dulu.
+- Menghapus dokumen hasil impor di aplikasi juga memindahkan file aslinya ke Sampah Drive (bisa dipulihkan 30 hari).
 
 ## Pemecahan masalah
 

@@ -36,7 +36,11 @@ export function getDriveClient(): DriveClient {
   return cachedClient;
 }
 
-async function getAccessToken(): Promise<string> {
+/**
+ * Token akses Drive (berlaku ~1 jam). Selain dipakai server, token ini juga
+ * dikirim ke browser pemilik untuk Google Picker (lihat /api/import/token).
+ */
+export async function getAccessToken(): Promise<string> {
   try {
     const { token } = await getAuth().getAccessToken();
     if (!token) throw new Error("Token akses Google Drive kosong.");
@@ -105,4 +109,29 @@ export async function deleteDriveFile(fileId: string) {
   } catch (cleanupError) {
     console.error("Gagal menghapus file Drive yang tidak terpakai:", cleanupError);
   }
+}
+
+/**
+ * Konfigurasi Google Picker untuk browser.
+ * - apiKey : GOOGLE_PICKER_API_KEY (API key yang dibatasi ke Picker API & domain aplikasi).
+ * - appId  : nomor project Google Cloud. File yang dipilih di Picker hanya
+ *            diberikan ke aplikasi (scope drive.file) jika appId cocok dengan
+ *            project OAuth client. Diambil dari awalan GOOGLE_CLIENT_ID
+ *            ("<nomor>-xxxx.apps.googleusercontent.com") bila tidak diisi.
+ */
+export function getPickerConfig(): { apiKey: string; appId: string } {
+  const apiKey = process.env.GOOGLE_PICKER_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Impor dari Drive belum diaktifkan. Isi GOOGLE_PICKER_API_KEY (lihat README, bagian Impor dari Google Drive)."
+    );
+  }
+  const appId =
+    process.env.GOOGLE_CLOUD_PROJECT_NUMBER ||
+    (process.env.GOOGLE_CLIENT_ID ?? "").match(/^(\d+)-/)?.[1] ||
+    "";
+  if (!appId) {
+    throw new Error("Nomor project Google Cloud tidak diketahui. Isi GOOGLE_CLOUD_PROJECT_NUMBER.");
+  }
+  return { apiKey, appId };
 }

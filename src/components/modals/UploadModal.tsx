@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { UploadCloud, X } from "lucide-react";
+import { HardDrive, UploadCloud, X } from "lucide-react";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { formatBytes, getFileKind, getFileLabel } from "@/lib/file-types";
+import { pickDriveFiles } from "@/lib/google-picker";
 import type { CategoryWithDocs } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
@@ -36,6 +37,8 @@ export default function UploadModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
+  const busy = uploading || importing;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pickFile = (picked: File | null | undefined) => {
@@ -113,10 +116,43 @@ export default function UploadModal({
     }
   };
 
+  /** Pilih file yang sudah ada di Google Drive lalu catat tanpa mengunggah ulang. */
+  const handleImport = async () => {
+    setError(null);
+    setImporting(true);
+    try {
+      const picked = await pickDriveFiles();
+      if (!picked || picked.length === 0) return;
+
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileIds: picked.map((item) => item.id),
+          categoryId: targetCategoryId || undefined,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error ?? "Gagal mengimpor dari Google Drive.");
+        return;
+      }
+      onClose();
+      showToast(result.message);
+      onSuccess(result.documentIds?.[0]);
+    } catch (importError) {
+      setError(
+        importError instanceof Error ? importError.message : "Tidak dapat terhubung ke Google Drive."
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const kind = file ? getFileKind(file.type, file.name) : "other";
 
   return (
-    <Modal open={open} title="Unggah Dokumen" onClose={onClose} locked={uploading}>
+    <Modal open={open} title="Unggah Dokumen" onClose={onClose} locked={busy}>
       <form onSubmit={handleUpload} noValidate className="space-y-4">
         {/* Area seret & lepas */}
         {!file ? (
@@ -193,6 +229,34 @@ export default function UploadModal({
           }}
         />
 
+        {!file && (
+          <>
+            <div className="flex items-center gap-3 text-[11px] text-gray-400">
+              <span className="h-px flex-1 bg-gray-100" />
+              atau
+              <span className="h-px flex-1 bg-gray-100" />
+            </div>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={busy}
+              className="press w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl border border-gray-200 text-left hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <span className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                <HardDrive className="w-4 h-4 text-gray-600" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-gray-800">
+                  {importing ? "Membuka Google Drive…" : "Impor dari Google Drive"}
+                </span>
+                <span className="block text-[11px] text-gray-400">
+                  Pilih file yang sudah ada di Drive, tanpa mengunggah ulang
+                </span>
+              </span>
+            </button>
+          </>
+        )}
+
         <div>
           <p className="block text-xs font-medium text-gray-700 mb-1.5">
             Kategori <span className="text-gray-400 font-normal">(opsional)</span>
@@ -201,7 +265,7 @@ export default function UploadModal({
             label="Kategori"
             value={targetCategoryId}
             onChange={setTargetCategoryId}
-            disabled={uploading}
+            disabled={busy}
             options={[
               { value: "", label: "Tanpa kategori", hint: "Bisa ditautkan nanti lewat Edit" },
               ...categories.map((category) => ({
@@ -223,7 +287,7 @@ export default function UploadModal({
             value={docTitle}
             onChange={(event) => setDocTitle(event.target.value)}
             className={inputClass}
-            disabled={uploading}
+            disabled={busy}
           />
         </div>
 
@@ -252,14 +316,14 @@ export default function UploadModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={uploading}
+            disabled={busy}
             className="px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-xl disabled:opacity-50"
           >
             Batal
           </button>
           <button
             type="submit"
-            disabled={uploading || !file}
+            disabled={busy || !file}
             className="press px-4 py-2 text-xs font-medium text-white bg-gray-900 rounded-xl hover:bg-gray-800 disabled:opacity-40"
           >
             {uploading ? "Mengunggah..." : "Unggah File"}

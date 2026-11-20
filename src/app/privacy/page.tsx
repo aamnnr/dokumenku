@@ -27,8 +27,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Google Drive</strong>: aplikasi memakai izin <code>drive.file</code>, sehingga
-            hanya dapat mengakses file yang diunggah melalui aplikasi ini. File lain di Drive
-            tidak dapat dibaca.
+            hanya dapat mengakses file yang diunggah melalui aplikasi ini atau yang Anda pilih
+            sendiri untuk diimpor lewat jendela pemilih file Google. File lain di Drive tidak
+            dapat dibaca.
           </li>
           <li>
             <strong>Metadata dokumen</strong> (judul, ukuran, jenis file, kategori, dan sidik jari
