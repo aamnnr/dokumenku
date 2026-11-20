@@ -21,8 +21,10 @@ export async function POST(request: Request) {
     if (typeof fileId !== "string" || !/^[\w-]+$/.test(fileId)) {
       return apiError("ID file tidak valid", 400);
     }
-    if (typeof categoryId !== "string" || !categoryId) {
-      return apiError("Kategori wajib dipilih", 400);
+    // Kategori opsional: tanpa kategori, dokumen tetap tersimpan.
+    const hasCategory = categoryId !== undefined && categoryId !== null && categoryId !== "";
+    if (hasCategory && typeof categoryId !== "string") {
+      return apiError("Kategori tidak valid", 400);
     }
 
     const supabase = getSupabase();
@@ -45,15 +47,17 @@ export async function POST(request: Request) {
       return apiError("Google Drive tidak mengembalikan checksum file", 502);
     }
 
-    const { data: category, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("id", categoryId)
-      .maybeSingle();
-    if (categoryError) throw new Error(categoryError.message);
-    if (!category) {
-      await deleteDriveFile(file.id);
-      return apiError("Kategori tidak ditemukan", 404);
+    if (hasCategory) {
+      const { data: category, error: categoryError } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("id", categoryId as string)
+        .maybeSingle();
+      if (categoryError) throw new Error(categoryError.message);
+      if (!category) {
+        await deleteDriveFile(file.id);
+        return apiError("Kategori tidak ditemukan", 404);
+      }
     }
 
     // Idempoten: jika request ini terkirim ulang, pakai baris yang sudah ada.
@@ -106,21 +110,28 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error: linkError } = await supabase
-      .from("document_categories")
-      .upsert(
-        { document_id: documentId, category_id: categoryId },
-        { onConflict: "document_id,category_id" }
-      );
-    if (linkError) throw new Error(linkError.message);
+    if (hasCategory) {
+      const { error: linkError } = await supabase
+        .from("document_categories")
+        .upsert(
+          { document_id: documentId, category_id: categoryId as string },
+          { onConflict: "document_id,category_id" }
+        );
+      if (linkError) throw new Error(linkError.message);
+    }
+
+    let message = "File berhasil diunggah ke Google Drive dan dicatat di database.";
+    if (isDuplicate) {
+      message = hasCategory
+        ? "File sudah ada di Drive. Dokumen hanya ditautkan ke kategori ini tanpa duplikasi."
+        : "File yang sama sudah tersimpan, jadi tidak diunggah dua kali.";
+    }
 
     return NextResponse.json({
       success: true,
       documentId,
       deduplicated: isDuplicate,
-      message: isDuplicate
-        ? "File sudah ada di Drive. Dokumen hanya ditautkan ke kategori ini tanpa duplikasi."
-        : "File berhasil diunggah ke Google Drive dan dicatat di database.",
+      message,
     });
   } catch (error) {
     console.error("Upload complete error:", error);

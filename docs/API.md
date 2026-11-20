@@ -20,9 +20,11 @@ dengan status `401`. Semua respons error berbentuk `{ success: false, error }`.
 
 | Method | Endpoint | Body | Respons |
 | --- | --- | --- | --- |
-| `GET` | `/api/documents` | – | `{ success, categories: CategoryWithDocs[] }` |
+| `GET` | `/api/documents` | – | `{ success, categories: CategoryWithDocs[], uncategorized: DocumentItem[] }` |
 | `POST` | `/api/categories` | `{ name, description? }` | `{ success, category }` · `409` bila nama sudah ada |
-| `PATCH` | `/api/documents/:id` | `{ title?, categoryIds? }` | `{ success, message }`; minimal 1 kategori, dan nama file di Drive ikut diganti |
+| `PATCH` | `/api/categories/:id` | `{ name?, description? }` | `{ success, message }` · `409` bila nama sudah ada |
+| `DELETE` | `/api/categories/:id` | – | `{ success, message }`; dokumen di dalamnya tidak ikut terhapus |
+| `PATCH` | `/api/documents/:id` | `{ title?, categoryIds? }` | `{ success, message }`; `categoryIds: []` melepas dokumen dari semua kategori, dan nama file di Drive ikut diganti |
 | `DELETE` | `/api/documents/:id` | – | `{ success, message }`; file dipindah ke Sampah Drive dan baris DB dihapus |
 | `GET` | `/api/preview?fileKey=` | – | `{ success, url }`: tautan pratinjau Google Drive |
 
@@ -30,9 +32,9 @@ dengan status `401`. Semua respons error berbentuk `{ success: false, error }`.
 
 | Method | Endpoint | Body | Respons |
 | --- | --- | --- | --- |
-| `POST` | `/api/upload/session` | `{ title, mimeType, size, categoryId }` | `{ success, uploadUrl }` · `413` bila lebih dari 100 MB |
+| `POST` | `/api/upload/session` | `{ title, mimeType, size, categoryId? }` | `{ success, uploadUrl }` · `413` bila lebih dari 100 MB |
 | `PUT` | `uploadUrl` (Google) | isi file mentah | `{ id }` |
-| `POST` | `/api/upload/complete` | `{ fileId, categoryId }` | `{ success, documentId, deduplicated, message }` |
+| `POST` | `/api/upload/complete` | `{ fileId, categoryId? }` | `{ success, documentId, deduplicated, message }` |
 
 ## Unduh & berbagi
 

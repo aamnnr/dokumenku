@@ -52,8 +52,13 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/docume
       const ids = Array.isArray(body.categoryIds)
         ? [...new Set(body.categoryIds.filter((v): v is string => typeof v === "string" && UUID_RE.test(v)))]
         : null;
-      if (!ids || ids.length === 0) {
-        return apiError("Pilih minimal satu kategori", 400);
+      if (!ids) return apiError("Daftar kategori tidak valid", 400);
+
+      if (ids.length === 0) {
+        // Lepas dari semua kategori: dokumen tetap ada sebagai "tanpa kategori".
+        const { error } = await supabase.from("document_categories").delete().eq("document_id", id);
+        if (error) throw new Error(error.message);
+        return NextResponse.json({ success: true, message: "Dokumen berhasil diperbarui" });
       }
 
       const { data: found, error: catError } = await supabase

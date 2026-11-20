@@ -27,17 +27,17 @@ export async function POST(request: Request) {
     if (size > MAX_UPLOAD_BYTES) {
       return apiError(`Ukuran file maksimal ${MAX_UPLOAD_BYTES / 1024 / 1024} MB`, 413);
     }
-    if (typeof categoryId !== "string" || !categoryId) {
-      return apiError("Kategori wajib dipilih", 400);
+    // Kategori opsional: dokumen boleh disimpan tanpa kategori.
+    if (categoryId !== undefined && categoryId !== null && categoryId !== "") {
+      if (typeof categoryId !== "string") return apiError("Kategori tidak valid", 400);
+      const { data: category, error } = await getSupabase()
+        .from("categories")
+        .select("id")
+        .eq("id", categoryId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!category) return apiError("Kategori tidak ditemukan", 404);
     }
-
-    const { data: category, error } = await getSupabase()
-      .from("categories")
-      .select("id")
-      .eq("id", categoryId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!category) return apiError("Kategori tidak ditemukan", 404);
 
     const uploadUrl = await createResumableUploadSession({
       name: title.trim().slice(0, 255),

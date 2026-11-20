@@ -23,9 +23,14 @@ export interface CategoryWithDocs {
   documents: DocumentItem[];
 }
 
-export interface DocumentsResponse {
-  success: boolean;
+/** Isi pustaka: kategori beserta dokumennya + dokumen tanpa kategori. */
+export interface Library {
   categories: CategoryWithDocs[];
+  uncategorized: DocumentItem[];
+}
+
+export interface DocumentsResponse extends Partial<Library> {
+  success: boolean;
   error?: string;
 }
 
